@@ -1,6 +1,7 @@
 import {Button, Col, Container, Form, Image, Modal, Row, Spinner} from "react-bootstrap";
 import {useEffect, useState} from "react";
 import axios from "axios";
+import {toast} from "react-toastify";
 
 function Pokecard(props) {
   let [loading, setLoading] = useState(true);
@@ -14,7 +15,7 @@ function Pokecard(props) {
         })
         .catch(error => {
           console.log(error);
-          //toast.error(error.message);
+          toast.error(error.message);
         });
   };
 

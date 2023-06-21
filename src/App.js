@@ -3,6 +3,8 @@ import {Button, ButtonGroup, Col, Container, Form, Row, Table} from "react-boots
 import {useEffect, useState} from "react";
 import axios from "axios";
 import Pokecard from "./components/Pokecard";
+import {toast} from "react-toastify";
+import {ToastContainer} from "react-toastify";
 
 function App() {
   let [pokemons, setPokemons] = useState([]);
@@ -27,7 +29,7 @@ function App() {
         })
         .catch(error => {
           console.log(error);
-          //toast.error(error.message);
+          toast.error(error.message);
         });
   };
   let onFirst = () => {
@@ -62,6 +64,7 @@ function App() {
 
   return (
       <Container>
+        <ToastContainer/>
         {id?<Pokecard id={id} pokemon={pokemon} onClose={onClose}></Pokecard>:null}
         <Row>
           <Col>
