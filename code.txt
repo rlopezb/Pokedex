@@ -1,0 +1,241 @@
+src/App.js
+import './style/App.css';
+import {Button, ButtonGroup, Col, Container, Form, Row, Table} from "react-bootstrap";
+import {useEffect, useState} from "react";
+import axios from "axios";
+import Pokecard from "./components/Pokecard";
+import {toast} from "react-toastify";
+import {ToastContainer} from "react-toastify";
+
+function App() {
+  let [pokemons, setPokemons] = useState([]);
+  let [pokemon, setPokemon] = useState(undefined);
+  let [id, setId] = useState(undefined);
+  let [pagination, setPagination] = useState({page: 0});
+  let [search, setSearch] = useState("");
+
+  let getPokemons = (search) => {
+    axios.get("http://localhost:8080/pokemon?page=" + pagination.page + (search.length > 0 ? "&name=" + search : ""))
+        .then(response => {
+          setPokemons([...response.data.content]);
+          setPagination({
+            page: response.data.number,
+            total: response.data.totalElements,
+            pages: response.data.totalPages,
+            first: response.data.first,
+            last: response.data.last,
+            start: response.data.number * response.data.size + 1,
+            end: response.data.number * response.data.size + response.data.size,
+          });
+        })
+        .catch(error => {
+          console.log(error);
+          toast.error(error.message);
+        });
+  };
+  let onFirst = () => {
+    pagination.page = 0;
+    getPokemons(search);
+  };
+  let onPrevious = () => {
+    pagination.page--;
+    getPokemons(search);
+  };
+  let onNext = () => {
+    pagination.page++;
+    getPokemons(search);
+  };
+  let onLast = () => {
+    pagination.page = pagination.pages - 1;
+    getPokemons(search);
+  };
+
+  let onSearch = () => {
+    pagination.page = 0;
+    getPokemons(search);
+  }
+  let onSelect = (pokemon) => {
+    setPokemon(pokemon);
+    setId(pokemon.id);
+  }
+  let onClose = () => {
+    setId(undefined);
+  }
+  useEffect(() => getPokemons(search), []);
+
+  return (
+      <Container>
+        <ToastContainer/>
+        {id?<Pokecard id={id} pokemon={pokemon} onClose={onClose}></Pokecard>:null}
+        <Row>
+          <Col>
+            <h2 className="float-start my-3">Pokemons</h2>
+          </Col>
+          <Col>
+            <div className="float-end my-3">
+              <Form className="d-flex">
+                <Form.Control id="search" type="search" placeholder="Search" className="me-2" aria-label="Search"
+                              onChange={(event) => setSearch(event.target.value)}/>
+                <Button onClick={onSearch}>Search</Button>
+              </Form>
+            </div>
+          </Col>
+        </Row>
+        <Row>
+          <Col>
+            <Table striped bordered hover>
+              <thead>
+              <tr>
+                <th>Name</th>
+                <th>Types</th>
+                <th>HP</th>
+                <th>Attack</th>
+                <th>Defense</th>
+                <th>Sp. attack</th>
+                <th>Sp. defense</th>
+                <th>Speed</th>
+              </tr>
+              </thead>
+              <tbody>
+              {pokemons.map(pokemon => {
+                return <tr key={pokemon.id} onClick={()=>onSelect(pokemon)}>
+                  <td><span id="name">{pokemon.name}</span></td>
+                  <td>{pokemon.type.join(", ")}</td>
+                  <td>{pokemon.base.hp}</td>
+                  <td>{pokemon.base.attack}</td>
+                  <td>{pokemon.base.defense}</td>
+                  <td>{pokemon.base.spAttack}</td>
+                  <td>{pokemon.base.spDefense}</td>
+                  <td>{pokemon.base.speed}</td>
+                </tr>
+              })}
+              </tbody>
+            </Table>
+          </Col>
+        </Row>
+        <Row>
+          <Col>
+            <ButtonGroup>
+              <Button variant="outline-secondary" onClick={onFirst} disabled={pagination.first}>&#8810;</Button>
+              <Button id="previous" variant="outline-secondary" onClick={onPrevious}
+                      disabled={pagination.first}>&#60;</Button>
+              <Button id="pagination"
+                      variant="outline-secondary">page {pagination.page + 1} of {pagination.pages}</Button>
+              <Button id="next" variant="outline-secondary" onClick={onNext} disabled={pagination.last}>&#62;</Button>
+              <Button variant="outline-secondary" onClick={onLast} disabled={pagination.last}>&#8811;</Button>
+            </ButtonGroup>
+          </Col>
+        </Row>
+      </Container>
+  );
+}
+
+export default App;
+src/components/Pokecard.js
+import {Button, Col, Container, Form, Image, Modal, Row, Spinner} from "react-bootstrap";
+import {useEffect, useState} from "react";
+import axios from "axios";
+import {toast} from "react-toastify";
+
+function Pokecard(props) {
+  let [loading, setLoading] = useState(true);
+  let [pokemon, setPokemon] = useState(props.pokemon);
+
+  let getPokemon = (id) => {
+    axios.get("https://pokeapi.co/api/v2/pokemon/" + props.id)
+        .then(response => {
+          setPokemon({...pokemon, ...response.data});
+          setLoading(false);
+        })
+        .catch(error => {
+          console.log(error);
+          toast.error(error.message);
+        });
+  };
+
+  let onClose = () => {
+    props.onClose();
+  }
+
+  useEffect(() => getPokemon(props.id), []);
+
+  return <Modal show={typeof pokemon !== 'undefined'} size="lg">
+    <Modal.Header>
+      <Modal.Title>{pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+      <Container>
+        <Row className="align-items-center">
+          <Col>
+            {loading?<Spinner/>:<Image src={pokemon.sprites.other["official-artwork"].front_default} style={{maxWidth: "500px" ,maxHeight: "500px"}}></Image>}
+          </Col>
+          <Col>
+            <Form>
+              <Form.Group>
+                <Form.Label>Name</Form.Label>
+                <Form.Control type="text" placeholder="Name" className="me-2" aria-label="Name" readOnly
+                              value={pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}/>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Types</Form.Label>
+                <Form.Control type="text" placeholder="Name" className="me-2" aria-label="Types" readOnly
+                              value={pokemon.type.join(", ")}/>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>HP</Form.Label>
+                <Form.Control type="text" placeholder="Name" className="me-2" aria-label="Name" readOnly
+                              value={pokemon.base.hp}/>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Attack</Form.Label>
+                <Form.Control type="text" placeholder="Name" className="me-2" aria-label="Name" readOnly
+                              value={pokemon.base.attack}/>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Defense</Form.Label>
+                <Form.Control type="text" placeholder="Name" className="me-2" aria-label="Name" readOnly
+                              value={pokemon.base.defense}/>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Speed</Form.Label>
+                <Form.Control type="text" placeholder="Name" className="me-2" aria-label="Name" readOnly
+                              value={pokemon.base.speed}/>
+              </Form.Group>
+
+            </Form>
+          </Col>
+        </Row>
+      </Container>
+    </Modal.Body>
+    <Modal.Footer>
+      <Button variant="secondary" onClick={onClose}>Close</Button>
+    </Modal.Footer>
+  </Modal>;
+}
+
+export default Pokecard;
+src/index.js
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './style/index.css';
+import App from './App';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+    <App/>
+);
+src/style/index.css
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
